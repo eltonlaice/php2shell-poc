@@ -173,7 +173,7 @@ ok  .../internal/guard
 ok  .../internal/mp
 ok  .../internal/probe
 ok  .../internal/verify
-ok  .../internal/waf
+ok  .../waf
 ok  .../rules
 ```
 

@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.1.1 — 2026-10-23
+
+### Changed
+
+- Promoted the WAF middleware from `internal/waf` to the public `waf` package,
+  so external Go servers can import it.
+- Rewrote the README as a structured project document with installation,
+  command reference, library usage, validation and limitations.
+- Bumped the CLI version to 0.1.1.
+
 ## v0.1.0 — 2026-10-23
 
 First public release of the Go edition.

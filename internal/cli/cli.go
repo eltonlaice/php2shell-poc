@@ -19,12 +19,12 @@ import (
 	"time"
 
 	"github.com/eltonlaice/php2shell-poc/internal/verify"
-	"github.com/eltonlaice/php2shell-poc/internal/waf"
 	"github.com/eltonlaice/php2shell-poc/rules"
+	"github.com/eltonlaice/php2shell-poc/waf"
 )
 
 // Version is the toolkit version.
-const Version = "0.1.0"
+const Version = "0.1.1"
 
 // Run executes the command line and returns a process exit code.
 func Run(args []string, out, errOut io.Writer) int {

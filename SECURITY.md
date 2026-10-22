@@ -34,7 +34,7 @@ In scope:
 
 - the Go CLI, verifiers, guard, WAF middleware, and rule files;
 - unsafe defaults that could expose a user's lab or break a host;
-- bypasses of the WAF rules shipped in `internal/waf` or `rules/`.
+- bypasses of the WAF rules shipped in `waf` or `rules/`.
 
 Out of scope:
 

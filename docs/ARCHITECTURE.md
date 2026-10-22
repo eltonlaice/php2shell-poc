@@ -7,7 +7,7 @@ internal/guard         refuses non-local targets by default
 internal/mp            byte-exact multipart builder
 internal/probe         HTTP client with a raw "stall" request mode
 internal/verify        chains A, C, D, E
-internal/waf           http.Handler middleware
+waf           http.Handler middleware
 rules/                 embedded Suricata / Sigma / ModSecurity rules
 lab/                   docker compose, PHP endpoints, nginx config
 docs/                  this file, threat model, verification notes
@@ -97,7 +97,7 @@ cover the primitive instead.
 
 - `internal/mp`: round-trip parsing, raw filename preservation, CR/LF rejection.
 - `internal/guard`: loopback/private/public/scheme cases.
-- `internal/waf`: one test per rule, body restoration, log-only, chunked.
+- `waf`: one test per rule, body restoration, log-only, chunked.
 - `internal/verify`: `httptest` fakes for all four chains plus the public-target
   refusal.
 - `rules`: embedded files validate and the expected rule counts are present.

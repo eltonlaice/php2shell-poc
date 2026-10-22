@@ -15,7 +15,7 @@
 | Request an arbitrary local file through an application LFI | chain A | the LFI must already exist in the app |
 | Trigger a multipart parsing OOM | chain D | crash primitive, no code execution |
 | Detect stale session state after a decode OOM | chain E | lab seeder required |
-| Block the above request shapes at the HTTP layer | `internal/waf` | best effort, not a patch |
+| Block the above request shapes at the HTTP layer | `waf` | best effort, not a patch |
 | Emit Suricata/Sigma/ModSecurity rules | `rules/` | templates, validate before deploying |
 
 ## Non-goals
