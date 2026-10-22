@@ -1,0 +1,128 @@
+# php2shell-poc — Suricata rules
+#
+# Detect request shapes used by CVE-2026-109618 / CVE-2026-109619 exploitation.
+# SID range 1000101-1000113 (local). Tune request-body-limit if you expect
+# filenames larger than 1 KiB.
+#
+# These rules are detection, not mitigation. Patch PHP and keep the WAF
+# middleware in front of legacy stacks.
+
+# 1000101 — upload progress trigger in a multipart body
+alert http $EXTERNAL_NET any -> $HOME_NET any ( \
+    msg:"PHP2SHELL upload progress trigger (PHP_SESSION_UPLOAD_PROGRESS)"; \
+    flow:established,to_server; \
+    http.method; content:"POST"; \
+    http.content_type; content:"multipart/form-data"; \
+    http.request_body; content:"PHP_SESSION_UPLOAD_PROGRESS"; \
+    classtype:web-application-attack; \
+    sid:1000101; rev:1; \
+    metadata:cve CVE-2026-109618, cve CVE-2026-109619; \
+    reference:cve,2026-109618; reference:cve,2026-109619; \
+)
+
+# 1000102 — session id as a form field instead of a cookie
+alert http $EXTERNAL_NET any -> $HOME_NET any ( \
+    msg:"PHP2SHELL session id supplied in multipart body"; \
+    flow:established,to_server; \
+    http.method; content:"POST"; \
+    http.content_type; content:"multipart/form-data"; \
+    http.request_body; content:"name=|22|PHPSESSID|22|"; \
+    classtype:web-application-attack; \
+    sid:1000102; rev:1; \
+    metadata:cve CVE-2026-109618; reference:cve,2026-109618; \
+)
+
+# 1000103 — PHP open tag in an upload filename (session file injection)
+alert http $EXTERNAL_NET any -> $HOME_NET any ( \
+    msg:"PHP2SHELL PHP code in upload filename"; \
+    flow:established,to_server; \
+    http.method; content:"POST"; \
+    http.content_type; content:"multipart/form-data"; \
+    http.request_body; content:"filename=|22|"; \
+    http.request_body; content:"<?"; distance:0; within:512; \
+    classtype:web-application-attack; \
+    sid:1000103; rev:1; \
+    metadata:cve CVE-2026-109618; reference:cve,2026-109618; \
+)
+
+# 1000104 — serialized object after a pipe in a filename
+alert http $EXTERNAL_NET any -> $HOME_NET any ( \
+    msg:"PHP2SHELL serialized object in upload filename"; \
+    flow:established,to_server; \
+    http.method; content:"POST"; \
+    http.content_type; content:"multipart/form-data"; \
+    http.request_body; content:"filename=|22|"; \
+    http.request_body; content:"|7C 4F 3A|"; distance:0; within:512; \
+    classtype:web-application-attack; \
+    sid:1000104; rev:1; \
+    metadata:cve CVE-2026-109619; reference:cve,2026-109619; \
+)
+
+# 1000105 — serialized array after a pipe in a filename
+alert http $EXTERNAL_NET any -> $HOME_NET any ( \
+    msg:"PHP2SHELL serialized array in upload filename"; \
+    flow:established,to_server; \
+    http.method; content:"POST"; \
+    http.content_type; content:"multipart/form-data"; \
+    http.request_body; content:"filename=|22|"; \
+    http.request_body; content:"|7C 61 3A|"; distance:0; within:512; \
+    classtype:web-application-attack; \
+    sid:1000105; rev:1; \
+    metadata:cve CVE-2026-109619; reference:cve,2026-109619; \
+)
+
+# 1000106 — chunked multipart POST (post_max_size bypass)
+alert http $EXTERNAL_NET any -> $HOME_NET any ( \
+    msg:"PHP2SHELL chunked multipart POST"; \
+    flow:established,to_server; \
+    http.method; content:"POST"; \
+    http.content_type; content:"multipart/form-data"; \
+    http.request_header; content:"Transfer-Encoding|3A 20|chunked"; nocase; \
+    classtype:web-application-attack; \
+    sid:1000106; rev:1; \
+    metadata:cve CVE-2026-109618; reference:cve,2026-109618; \
+)
+
+# 1000107 — PHP OOM in response (crash / exploitation indicator)
+alert http $HOME_NET any -> $EXTERNAL_NET any ( \
+    msg:"PHP2SHELL PHP memory exhaustion response"; \
+    flow:established,to_client; \
+    http.response_body; content:"Allowed memory size"; \
+    http.response_body; content:"exhausted"; within:80; \
+    classtype:web-application-attack; \
+    sid:1000107; rev:1; \
+    metadata:cve CVE-2026-109618; reference:cve,2026-109618; \
+)
+
+# 1000108 — session destruction failure (stale state indicator)
+alert http $HOME_NET any -> $EXTERNAL_NET any ( \
+    msg:"PHP2SHELL session destruction failure in response"; \
+    flow:established,to_client; \
+    http.response_body; content:"Session object destruction failed"; \
+    classtype:web-application-attack; \
+    sid:1000108; rev:1; \
+    metadata:cve CVE-2026-109619; reference:cve,2026-109619; \
+)
+
+# 1000109 — LFI request for a PHP session file
+alert http $EXTERNAL_NET any -> $HOME_NET any ( \
+    msg:"PHP2SHELL session file path in request URI"; \
+    flow:established,to_server; \
+    http.uri; content:"sess_"; \
+    http.uri; content:"/tmp/"; distance:0; within:64; \
+    classtype:web-application-attack; \
+    sid:1000109; rev:1; \
+    metadata:cve CVE-2026-109618; reference:cve,2026-109618; \
+)
+
+# 1000110 — PHP code in a multipart part body (webshell drop)
+alert http $EXTERNAL_NET any -> $HOME_NET any ( \
+    msg:"PHP2SHELL PHP open tag in multipart body"; \
+    flow:established,to_server; \
+    http.method; content:"POST"; \
+    http.content_type; content:"multipart/form-data"; \
+    http.request_body; content:"<?php"; \
+    classtype:web-application-attack; \
+    sid:1000110; rev:1; \
+    metadata:cve CVE-2026-109618; reference:cve,2026-109618; \
+)

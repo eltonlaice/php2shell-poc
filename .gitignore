@@ -1,0 +1,6 @@
+/bin/
+/.gocache/
+/.gopath/
+*.test
+*.out
+.DS_Store

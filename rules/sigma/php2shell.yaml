@@ -1,0 +1,125 @@
+# php2shell-poc — Sigma rules
+#
+# These rules assume standard web-server access logs (nginx/apache combined).
+# They do not inspect request bodies, because access logs normally do not
+# contain them; body-level detection is handled by the Go WAF middleware and
+# the Suricata rules.
+#
+# Validate with: sigma check rules/sigma/php2shell.yaml
+
+title: php2shell Upload Progress Trigger
+id: b6f1c9a2-4d3e-4a7b-9c81-2f5e7d9a0b31
+status: experimental
+description: >
+  A POST to a PHP endpoint whose body contains the upload progress trigger.
+  Only visible when the web server logs request bodies (for example a
+  ModSecurity audit log or a custom nginx log_format).
+author: php2shell-poc contributors
+date: 2026-10-23
+references:
+  - https://github.com/php/php-src/security/advisories/GHSA-w8hw-w9fx-j79w
+  - https://github.com/php/php-src/security/advisories/GHSA-6wmf-4rv5-p3rp
+logsource:
+  category: webserver
+detection:
+  selection:
+    cs-method: POST
+    cs-uri|endswith: '.php'
+  keywords:
+    - 'PHP_SESSION_UPLOAD_PROGRESS'
+  condition: selection and keywords
+level: high
+falsepositives:
+  - Applications that still implement server-side upload progress bars
+tags:
+  - attack.initial_access
+  - attack.t1190
+  - cve.2026.109618
+  - cve.2026.109619
+
+---
+title: php2shell Session File LFI Attempt
+id: c4e2d8b1-7a6f-4b3c-8d92-1e4f6a8b0c42
+status: experimental
+description: >
+  Request URI contains a PHP session file path, the read step of the
+  session-injection plus LFI chain.
+author: php2shell-poc contributors
+date: 2026-10-23
+references:
+  - https://github.com/php/php-src/security/advisories/GHSA-w8hw-w9fx-j79w
+logsource:
+  category: webserver
+detection:
+  selection:
+    cs-uri-query|contains:
+      - 'sess_'
+      - '/tmp/sessions'
+  condition: selection
+level: high
+falsepositives:
+  - Debug endpoints that legitimately read session files
+tags:
+  - attack.initial_access
+  - attack.t1190
+  - cve.2026.109618
+
+---
+title: php2shell PHP Memory Exhaustion Response
+id: d7a3e5c9-2b8f-4c1d-9e63-5a0b7c2d4f58
+status: experimental
+description: >
+  A PHP request that failed with a memory exhaustion error while parsing a
+  large multipart body. This is the observable side effect of the OOM
+  corruption path; it is not proof of code execution.
+author: php2shell-poc contributors
+date: 2026-10-23
+references:
+  - https://github.com/php/php-src/security/advisories/GHSA-w8hw-w9fx-j79w
+logsource:
+  category: webserver
+detection:
+  selection:
+    cs-method: POST
+    sc-status:
+      - 500
+      - 502
+      - 503
+  filter_size:
+    cs-bytes|gte: 5000000
+  condition: selection and filter_size
+level: medium
+falsepositives:
+  - Large legitimate uploads that fail for unrelated reasons
+tags:
+  - attack.initial_access
+  - cve.2026.109618
+
+---
+title: php2shell Serialized Filename Upload
+id: e9b4f1d2-6c7a-4e8b-8f15-3d2c9a0b6e74
+status: experimental
+description: >
+  Upload filename contains a pipe followed by a serialized PHP value, the
+  primitive used by the session handler mismatch chain. Requires a proxy or
+  WAF log that records multipart filenames.
+author: php2shell-poc contributors
+date: 2026-10-23
+references:
+  - https://github.com/php/php-src/security/advisories/GHSA-6wmf-4rv5-p3rp
+logsource:
+  category: webserver
+detection:
+  selection:
+    cs-method: POST
+  keywords:
+    - '|O:'
+    - '|a:'
+  condition: selection and keywords
+level: critical
+falsepositives:
+  - Applications that legitimately accept serialized data in filenames
+tags:
+  - attack.initial_access
+  - attack.t1190
+  - cve.2026.109619
