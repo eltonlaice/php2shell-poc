@@ -32,10 +32,10 @@ level: high
 falsepositives:
   - Applications that still implement server-side upload progress bars
 tags:
-  - attack.initial_access
+  - attack.initial-access
   - attack.t1190
-  - cve.2026.109618
-  - cve.2026.109619
+  - cve.2026-109618
+  - cve.2026-109619
 
 ---
 title: php2shell Session File LFI Attempt
@@ -60,9 +60,9 @@ level: high
 falsepositives:
   - Debug endpoints that legitimately read session files
 tags:
-  - attack.initial_access
+  - attack.initial-access
   - attack.t1190
-  - cve.2026.109618
+  - cve.2026-109618
 
 ---
 title: php2shell PHP Memory Exhaustion Response
@@ -92,8 +92,8 @@ level: medium
 falsepositives:
   - Large legitimate uploads that fail for unrelated reasons
 tags:
-  - attack.initial_access
-  - cve.2026.109618
+  - attack.initial-access
+  - cve.2026-109618
 
 ---
 title: php2shell Serialized Filename Upload
@@ -120,6 +120,6 @@ level: critical
 falsepositives:
   - Applications that legitimately accept serialized data in filenames
 tags:
-  - attack.initial_access
+  - attack.initial-access
   - attack.t1190
-  - cve.2026.109619
+  - cve.2026-109619

@@ -4,6 +4,9 @@ Environment: macOS, Docker 29.4, Go 1.26.2 (module targets Go 1.22), 2026-10-23.
 Lab images: `php:8.2.34-fpm`, `php:8.2.35-fpm`, `php:8.2.34-apache`,
 `nginx:1.27-alpine`.
 
+All published ports bind to `127.0.0.1`. The seeder endpoint requires
+`P2S_LAB=1`, which the compose file sets.
+
 ## Setup
 
 ```bash
@@ -11,11 +14,27 @@ docker compose -f lab/docker-compose.yml up -d
 ```
 
 ```
-p2s-fpm-8234     Up
-p2s-fpm-8235     Up
-p2s-apache-8234  Up
-p2s-nginx        Up
+p2s-fpm-8234     internal :9000
+p2s-fpm-8235     internal :9000
+p2s-apache-8234  127.0.0.1:18081->80/tcp
+p2s-nginx        127.0.0.1:18080->80/tcp, 127.0.0.1:18082->82/tcp
 ```
+
+## `verify all` (default)
+
+```bash
+./bin/php2shell verify all
+```
+
+```
+[SKIP] chain E: experimental (use --experimental to include it)
+[OK] chain A: RCE confirmed (session injection + LFI): uid=33(www-data) ...
+[OK] chain C: RCE confirmed (handler mismatch -> __destruct)
+[OK] chain D: OOM triggered in the multipart parser (crash primitive only)
+```
+
+Exit code `0`. Chain E is opt-in with `verify all --experimental`; that run
+includes the failing E result and exits `1`.
 
 ## Chain A — session injection + LFI
 
@@ -77,7 +96,7 @@ needs a POP chain in application code.
 `OK` here means the OOM primitive was observed. The verifier does not attempt
 heap grooming or code execution, and the summary says so.
 
-## Chain E — FPM stale state
+## Chain E — FPM stale state (experimental)
 
 ```bash
 ./bin/php2shell verify chain-e --target http://127.0.0.1:18080 --size 25165824 --attempts 8
@@ -112,19 +131,51 @@ curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8080/index.php
 # [FAIL] ... inject POST -> 403
 ```
 
-The WAF log records the three matched rules (`session-in-body`,
-`upload-progress`, `filename-php`) and the benign request is proxied unchanged.
+The log records `session-in-body`, `upload-progress` and `filename-php` with
+`action=blocked`. With `--log-only`, the same attack passes through and chain A
+still succeeds, while the rules are logged with `action=logged`.
+
+## End-to-end script
+
+```bash
+KEEP=1 ./scripts/e2e.sh
+```
+
+Runs the lab, chains A/C/D, the expected chain E failure, `verify all`, and the
+WAF block/benign checks. It ends with:
+
+```
+e2e passed: A, C, D confirmed; E experimental; WAF blocks
+```
+
+## Detection rules
+
+`./scripts/validate-rules.sh`:
+
+| Engine | Version | Result |
+|--------|---------|--------|
+| Suricata | 8.0.7 | `suricata -T` — configuration loaded, no warnings |
+| Sigma | sigma-cli 3.1.0 / pySigma 1.5.1 | `sigma check` — 0 errors, 0 issues |
+| ModSecurity | v3, Apache 2.4.69 (OWASP CRS image) | `httpd -t` — `Syntax OK` |
+
+This is load/syntax validation, not a behavioural test against live traffic.
+Details and prerequisites are in [RULES.md](RULES.md).
 
 ## Unit tests
 
 ```bash
-go test ./...
+./scripts/check.sh
 ```
 
 ```
+ok  .../internal/cli
 ok  .../internal/guard
 ok  .../internal/mp
+ok  .../internal/probe
 ok  .../internal/verify
 ok  .../internal/waf
 ok  .../rules
 ```
+
+`go test -race ./...`, `go vet`, `gofmt`, build, `rules check` and
+`docker compose config` all pass.

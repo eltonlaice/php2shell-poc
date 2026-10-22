@@ -39,7 +39,7 @@ alert http $EXTERNAL_NET any -> $HOME_NET any ( \
     http.method; content:"POST"; \
     http.content_type; content:"multipart/form-data"; \
     http.request_body; content:"filename=|22|"; \
-    http.request_body; content:"<?"; distance:0; within:512; \
+    content:"<?"; distance:0; within:512; \
     classtype:web-application-attack; \
     sid:1000103; rev:1; \
     metadata:cve CVE-2026-109618; reference:cve,2026-109618; \
@@ -52,7 +52,7 @@ alert http $EXTERNAL_NET any -> $HOME_NET any ( \
     http.method; content:"POST"; \
     http.content_type; content:"multipart/form-data"; \
     http.request_body; content:"filename=|22|"; \
-    http.request_body; content:"|7C 4F 3A|"; distance:0; within:512; \
+    content:"|7C 4F 3A|"; distance:0; within:512; \
     classtype:web-application-attack; \
     sid:1000104; rev:1; \
     metadata:cve CVE-2026-109619; reference:cve,2026-109619; \
@@ -65,7 +65,7 @@ alert http $EXTERNAL_NET any -> $HOME_NET any ( \
     http.method; content:"POST"; \
     http.content_type; content:"multipart/form-data"; \
     http.request_body; content:"filename=|22|"; \
-    http.request_body; content:"|7C 61 3A|"; distance:0; within:512; \
+    content:"|7C 61 3A|"; distance:0; within:512; \
     classtype:web-application-attack; \
     sid:1000105; rev:1; \
     metadata:cve CVE-2026-109619; reference:cve,2026-109619; \
@@ -109,7 +109,7 @@ alert http $EXTERNAL_NET any -> $HOME_NET any ( \
     msg:"PHP2SHELL session file path in request URI"; \
     flow:established,to_server; \
     http.uri; content:"sess_"; \
-    http.uri; content:"/tmp/"; distance:0; within:64; \
+    content:"/tmp/"; distance:0; within:64; \
     classtype:web-application-attack; \
     sid:1000109; rev:1; \
     metadata:cve CVE-2026-109618; reference:cve,2026-109618; \

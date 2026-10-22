@@ -141,11 +141,12 @@ func runVerify(args []string, out, errOut io.Writer) int {
 	case "all":
 		fs := flag.NewFlagSet("all", flag.ContinueOnError)
 		fs.SetOutput(errOut)
-		fpm := fs.String("fpm-target", "http://127.0.0.1:18080", "FPM target (chains A, C, E)")
+		fpm := fs.String("fpm-target", "http://127.0.0.1:18080", "FPM target (chains A and C)")
 		apache := fs.String("apache-target", "http://127.0.0.1:18081", "mod_php target (chain D)")
 		allow := fs.Bool("allow-public", false, "allow non-local targets")
 		cmd := fs.String("command", "id", "command to execute")
 		attempts := fs.Int("attempts", 3, "attempts for race-dependent steps")
+		experimental := fs.Bool("experimental", false, "also run chain E (not reproduced in the lab)")
 		if err := fs.Parse(args[1:]); err != nil {
 			return 2
 		}
@@ -154,18 +155,27 @@ func runVerify(args []string, out, errOut io.Writer) int {
 		base.Command = *cmd
 		base.Attempts = *attempts
 
-		results := []verify.Result{}
+		var results []verify.Result
+		var errs []error
+
 		a, errA := verify.ChainA(ctx, base)
 		c, errC := verify.ChainC(ctx, base)
-		e, errE := verify.ChainE(ctx, base)
 		dOpt := base
 		dOpt.Target = *apache
 		d, errD := verify.ChainD(ctx, dOpt)
-		for _, r := range []verify.Result{a, c, e, d} {
-			results = append(results, r)
+		results = append(results, a, c, d)
+		errs = append(errs, errA, errC, errD)
+
+		if *experimental {
+			e, errE := verify.ChainE(ctx, base)
+			results = append(results, e)
+			errs = append(errs, errE)
+		} else {
+			fmt.Fprintln(out, "[SKIP] chain E: experimental (use --experimental to include it)")
 		}
+
 		failed := 0
-		for _, err := range []error{errA, errC, errE, errD} {
+		for _, err := range errs {
 			if err != nil {
 				fmt.Fprintln(errOut, "error:", err)
 				failed++

@@ -5,7 +5,7 @@ export GOPATH
 
 BINARY := bin/php2shell
 
-.PHONY: build test vet fmt rules lab-up lab-down lab-status verify waf clean
+.PHONY: build test vet fmt rules check validate-rules e2e lab-up lab-down lab-status verify waf clean
 
 build:
 	go build -o $(BINARY) ./cmd/php2shell
@@ -21,6 +21,15 @@ fmt:
 
 rules:
 	go run ./cmd/php2shell rules check
+
+check:
+	./scripts/check.sh
+
+validate-rules:
+	./scripts/validate-rules.sh
+
+e2e:
+	KEEP=$(KEEP) ./scripts/e2e.sh
 
 lab-up:
 	docker compose -f lab/docker-compose.yml up -d

@@ -37,11 +37,13 @@
    systems the operator owns.
 2. Verification is sequential and single-target, so a mistyped command cannot
    fan out.
-3. The lab seeder endpoint (`/seed_session.php`) exists only in `lab/` and is
-   labelled as non-attack tooling.
-4. The WAF logs every match with method, path and remote address, so it can be
+3. The lab binds published ports to `127.0.0.1` by default. Exposing it with
+   `P2S_BIND=0.0.0.0` is an explicit opt-in for an isolated network.
+4. The lab seeder endpoint (`/seed_session.php`) returns 404 unless the
+   container runs with `P2S_LAB=1` (the bundled compose file sets it).
+5. The WAF logs every match with method, path and remote address, so it can be
    run in `--log-only` mode before blocking.
-5. The rules and code carry no exploit for chains D/E beyond the crash/state
+6. The rules and code carry no exploit for chains D/E beyond the crash/state
    observations described above.
 
 ## Residual risk
@@ -50,6 +52,8 @@
   testing; using it against third parties is unlawful in most jurisdictions.
 - The WAF can be bypassed (body larger than `MaxBody`, chunked encoding unless
   blocked, parsing differences between Go and PHP). It is defence in depth.
+  `MaxBody` also bounds memory per request; keep the proxy body limit below the
+  process memory budget.
 - Chain A works on patched PHP when an LFI is present. Patching does not remove
   the application-layer condition.
 

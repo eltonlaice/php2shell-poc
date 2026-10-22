@@ -17,9 +17,13 @@ Four containers, no host PHP required:
 | `/vuln.php?page=FILE` | `include($page)` — LFI sink for chain A |
 | `/nosession.php` | no `session_start()`, chain E consumer |
 | `/session_oom.php` | decodes the session, OOMs on a large one |
-| `/seed_session.php?sid=&size=` | **lab only** writes a large session file |
+| `/seed_session.php?sid=&size=` | **lab only** writes a large session file (requires `P2S_LAB=1`, set by compose) |
 | `/app/upload.php` | `php_serialize` handler (`.user.ini`) |
 | `/api/endpoint.php` | `php` handler plus the `Evil` gadget (`.user.ini`) |
+
+All published ports bind to `127.0.0.1`. To expose the lab on an isolated
+network, set `P2S_BIND=0.0.0.0` when starting compose; never do that on a public
+interface, the images are intentionally vulnerable.
 
 ## Reset
 

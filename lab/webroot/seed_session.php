@@ -2,7 +2,14 @@
 // LAB ONLY. Creates a large, valid session file so that chain E can be
 // exercised without first inflating a session through upload filenames.
 // This is not an attack primitive; it exists so the stale-state verifier is
-// reproducible. Remove it from any environment that is not a lab.
+// reproducible. It only responds when the container is started with P2S_LAB=1
+// (the bundled compose file sets it).
+if (getenv('P2S_LAB') !== '1') {
+    http_response_code(404);
+    echo "not found\n";
+    exit;
+}
+
 $sid = $_GET['sid'] ?? '';
 $size = (int)($_GET['size'] ?? (24 * 1024 * 1024));
 

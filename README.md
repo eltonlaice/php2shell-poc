@@ -12,6 +12,8 @@ Go WAF middleware, and the detection rules in one binary.
 > [ikow/php2shell-poc](https://github.com/ikow/php2shell-poc); this is an
 > independent Go edition with the same lab scope and its own verifiers.
 
+**Release:** [v0.1.0](https://github.com/eltonlaice/php2shell-poc/releases/tag/v0.1.0)
+
 ## Why another php2shell repo?
 
 The Python original is a research write-up with three scripts. This project is
@@ -37,8 +39,9 @@ Tested on 2026-10-23 against the bundled lab (Docker, PHP 8.2.34 / 8.2.35):
 | C | FPM 8.2.34 `:18080` | **OK** | `__destruct` gadget fired after the handler mismatch |
 | D | mod_php 8.2.34 `:18081` | **partial** | OOM in the multipart parser; **no code execution attempted** |
 | E | FPM 8.2.34 `:18080` | **not reproduced** | producer OOM observed, stale consumer state not reproduced |
+| all | A/C/D | **OK** | exits 0; chain E is skipped unless `--experimental` |
 
-Unit tests cover the request builders, the WAF, the guard and all four
+Unit tests cover the request builders, the WAF, the guard, the CLI and all four
 verifiers. The end-to-end outputs are in [docs/VERIFICATION.md](docs/VERIFICATION.md).
 
 ## Quick start
@@ -52,16 +55,18 @@ cd php2shell-poc
 # 1. Start the lab (four containers)
 docker compose -f lab/docker-compose.yml up -d
 
-# 2. Verify the chains
-go run ./cmd/php2shell verify chain-a
-go run ./cmd/php2shell verify chain-c
-go run ./cmd/php2shell verify chain-d
-go run ./cmd/php2shell verify chain-e      # experimental, may fail
+# 2. Verify chains A, C and D (exits 0)
 go run ./cmd/php2shell verify all
+
+# 3. Optional: experimental chain E (expected to fail)
+go run ./cmd/php2shell verify chain-e
+
+# Or run the whole thing, including the WAF block test
+KEEP=1 make e2e
 ```
 
 `verify all` expects the default lab ports. Use `--fpm-target` and
-`--apache-target` if yours differ.
+`--apache-target` if yours differ; add `--experimental` to include chain E.
 
 ## Commands
 
@@ -85,6 +90,7 @@ php2shell version
 | `--attempts` | `3` | retries for race-dependent steps |
 | `--headers`, `--header-size` | `30000`, `512` | chain D OOM amplification |
 | `--size` | `24 MiB` | chain E seeded session size |
+| `--experimental` | `false` | `verify all` also runs chain E |
 
 Examples:
 
@@ -106,8 +112,8 @@ php2shell verify chain-e --target http://127.0.0.1:18080 --size 25165824
 ```
 
 Exit codes: `0` all selected chains confirmed, `1` at least one failed,
-`2` usage error. `verify all` currently exits `1` because chain E is not
-confirmed; run the individual commands if you need a green run.
+`2` usage error. `verify all` runs A, C and D and exits `0` on the bundled lab;
+chain E is only included with `--experimental` and is still unconfirmed.
 
 Chain C interpolates the command into a serialized gadget, so it must not
 contain `"`, `\` or NUL bytes. Chain A passes the command as a query parameter
@@ -170,10 +176,30 @@ response rule also needs `SecResponseBodyAccess On`.
 
 Endpoints include `/index.php` (session), `/vuln.php?page=` (LFI), `/app/` and
 `/api/` (`.user.ini` handler mismatch), `/nosession.php` and
-`/seed_session.php` (lab-only chain E seeder). See [lab/README.md](lab/README.md).
+`/seed_session.php` (chain E seeder, only available when `P2S_LAB=1`).
+See [lab/README.md](lab/README.md).
+
+Ports bind to `127.0.0.1` by default. To reach the lab from another host, set
+`P2S_BIND=0.0.0.0` **only on an isolated network**; these containers run
+intentionally vulnerable PHP.
 
 The compose file is committed, so `docker compose up -d` works without a setup
 script. `lab/setup.sh` is only a convenience wrapper.
+
+## Validation
+
+```bash
+./scripts/check.sh            # gofmt, vet, race tests, build, rules, compose
+./scripts/validate-rules.sh   # Suricata -T, Sigma check, ModSecurity httpd -t
+KEEP=1 ./scripts/e2e.sh
+```
+
+`scripts/e2e.sh` starts the lab, verifies A/C/D, runs the (failing) chain E as
+an expected result, runs `verify all`, and checks that the WAF blocks chain A
+while allowing benign traffic.
+
+The rules load cleanly in Suricata 8.0.7, sigma-cli 3.1.0 (0 issues) and
+ModSecurity v3 (`Syntax OK`). See [docs/RULES.md](docs/RULES.md).
 
 ## Scope and non-goals
 
@@ -190,6 +216,8 @@ script. `lab/setup.sh` is only a convenience wrapper.
 - [PHP security release](https://www.php.net/index.php#2026-10-20-1)
 - [SANS ISC diary](https://isc.sans.edu/diary/rss/33440)
 - [Original Python research](https://github.com/ikow/php2shell-poc)
+- [Rule notes and engine validation](docs/RULES.md)
+- [Security policy](SECURITY.md) · [Contributing](CONTRIBUTING.md)
 
 ## License
 

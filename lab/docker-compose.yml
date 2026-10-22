@@ -8,6 +8,8 @@ services:
       - ./webroot:/var/www/html
       - ./php.ini:/usr/local/etc/php/php.ini:ro
       - ./fpm.conf:/usr/local/etc/php-fpm.d/zz-lab.conf:ro
+    environment:
+      P2S_LAB: "1"
     command: sh -c "mkdir -p /tmp/sessions && chmod 1777 /tmp/sessions && php-fpm"
 
   fpm-patched:
@@ -17,14 +19,18 @@ services:
       - ./webroot:/var/www/html
       - ./php.ini:/usr/local/etc/php/php.ini:ro
       - ./fpm.conf:/usr/local/etc/php-fpm.d/zz-lab.conf:ro
+    environment:
+      P2S_LAB: "1"
     command: sh -c "mkdir -p /tmp/sessions && chmod 1777 /tmp/sessions && php-fpm"
 
   nginx:
     image: nginx:1.27-alpine
     container_name: p2s-nginx
     ports:
-      - "18080:80"   # PHP 8.2.34 FPM (vulnerable)
-      - "18082:82"   # PHP 8.2.35 FPM (patched, differential testing)
+      # Loopback only by default. Set P2S_BIND=0.0.0.0 only on an isolated
+      # lab network; these containers run intentionally vulnerable PHP.
+      - "${P2S_BIND:-127.0.0.1}:18080:80"   # PHP 8.2.34 FPM (vulnerable)
+      - "${P2S_BIND:-127.0.0.1}:18082:82"   # PHP 8.2.35 FPM (patched, differential)
     volumes:
       - ./webroot:/var/www/html:ro
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
@@ -36,8 +42,10 @@ services:
     image: php:8.2.34-apache
     container_name: p2s-apache-8234
     ports:
-      - "18081:80"   # mod_php (chain D)
+      - "${P2S_BIND:-127.0.0.1}:18081:80"   # mod_php (chain D)
     volumes:
       - ./webroot:/var/www/html
       - ./php-apache.ini:/usr/local/etc/php/php.ini:ro
+    environment:
+      P2S_LAB: "1"
     command: sh -c "mkdir -p /tmp/sessions && chmod 1777 /tmp/sessions && apache2-foreground"
