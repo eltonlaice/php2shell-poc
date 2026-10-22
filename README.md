@@ -8,6 +8,10 @@ Go WAF middleware, and the detection rules in one binary.
 > at a time and refuses non-local addresses unless you pass `--allow-public`.
 > See [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) before running anything.
 
+> **Not the original research repo.** The Python original is
+> [ikow/php2shell-poc](https://github.com/ikow/php2shell-poc); this is an
+> independent Go edition with the same lab scope and its own verifiers.
+
 ## Why another php2shell repo?
 
 The Python original is a research write-up with three scripts. This project is
